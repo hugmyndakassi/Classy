@@ -1,6 +1,7 @@
 import idaapi
 import idc
 import ida_bytes
+import ida_typeinf
 
 import classy.database as database
 import classy.itanium_mangler as itanium_mangler
@@ -31,7 +32,6 @@ class Class(object):
         if self.base is None:
             db.root_classes.append(self)
 
-
     def unlink(self, delete_orphaned_struct=False):
         if len(self.derived) > 0:
             raise ValueError('Cannot unlink classes with derived classes')
@@ -53,15 +53,12 @@ class Class(object):
         if self.base is None:
             db.root_classes.remove(self)
 
-
     def safe_name(self):
         return Class.s_safe_name(self.name)
-
 
     @staticmethod
     def s_safe_name(name):
         return name.replace('::', '_')
-
 
     def rename(self, new_name):
         old_name = self.name
@@ -92,14 +89,12 @@ class Class(object):
 
         self.refresh()
 
-
     def refresh(self):
         for m in self.methods:
             m.refresh()
         for m in self.vmethods:
             m.refresh()
         self.refresh_struct_comment()
-
 
     def set_vtable_range(self, start, end):
         if self.is_vtable_locked():
@@ -119,22 +114,18 @@ class Class(object):
         self.vtable_end = end
         self.init_vtable()
 
-
     def is_vtable_locked(self):
         return len(self.derived) > 0
-
 
     def can_be_derived(self):
         if self.base is None:
             return True
         return len(self.vmethods) >= len(self.base.vmethods)    # vtable inited?
 
-
     def vtable_start_idx(self):
         if self.base is None:
             return 0
         return len(self.base.vmethods)
-
 
     def reset_vtable(self):
         if self.is_vtable_locked():
@@ -146,18 +137,17 @@ class Class(object):
             vm.unlink()
         self.vmethods = []
 
-
     def init_vtable(self):
         my_start_idx = self.vtable_start_idx()
 
         # Fix: support 64bit work
         if idc.__EA64__:
             pointer_size = idaapi.DEF_ADDRSIZE
-            pfn_make_ptr = lambda x: ida_bytes.create_data(x, idc.FF_QWORD, 8, idaapi.BADADDR) #MakeQword
+      def pfn_make_ptr(x): return ida_bytes.create_data(x, idc.FF_QWORD, 8, idaapi.BADADDR)  # MakeQword
             pfn_get_ptr_value = ida_bytes.get_qword
         else:
             pointer_size = idaapi.DEF_ADDRSIZE
-            pfn_make_ptr =  lambda x: ida_bytes.create_data(x, idc.FF_DWORD, 4, idaapi.BADADDR) #ida_bytes.MakeDword
+      def pfn_make_ptr(x): return ida_bytes.create_data(x, idc.FF_DWORD, 4, idaapi.BADADDR)  # ida_bytes.MakeDword
             pfn_get_ptr_value = ida_bytes.get_dword
 
         for idx, ea in enumerate(range(self.vtable_start, self.vtable_end, pointer_size)):
@@ -194,12 +184,10 @@ class Class(object):
                 vm.refresh()
                 self.vmethods.append(vm)
 
-
     def get_vtable_index_ea(self, idx):
         if idx > len(self.vmethods):
             raise ValueError('get_vtable_index_ea for out of range index')
         return self.vtable_start + (idx*4)
-
 
     def iter_vtable(self):
         ea = self.vtable_start
@@ -208,7 +196,6 @@ class Class(object):
         while ea <= end:
             yield (ea, idc.get_wide_dword(ea))
             ea += 4
-
 
     def set_struct_id(self, new_struct_id, delete_orphaned=False):
         db = database.get()
@@ -227,7 +214,6 @@ class Class(object):
 
         self.refresh()
 
-
     def unlink_struct(self, delete_orphaned=False):
         if self.struct_id == idc.BADADDR:
             return
@@ -243,13 +229,11 @@ class Class(object):
 
         self.struct_id = idc.BADADDR
 
-
     def refresh_struct_comment(self):
         if self.struct_id == idc.BADADDR:
             return
 
         idc.set_struc_cmt(self.struct_id, 'Linked to %s' % self.name, False)
-
 
     def generate_cpp_definition(self):
         contents = []
@@ -295,8 +279,10 @@ class Class(object):
 
         # Todo: Replace this ugly temp code
         if self.struct_id != idc.BADADDR:
-            struct = idaapi.get_struc(self.struct_id)
-            raw_txt = idc.GetLocalType(struct.ordinal, idc.PRTYPE_1LINE)
+      # IDA 9.x: Use ida_typeinf.tinfo_t instead of ida_struct.get_struc
+      tif = ida_typeinf.tinfo_t()
+      if tif.get_type_by_tid(self.struct_id) and tif.is_udt():
+        raw_txt = idc.GetLocalType(tif.get_ordinal(), idc.PRTYPE_1LINE)
             l_idx = raw_txt.find('{')
             r_idx = raw_txt.find('}')
             segs = raw_txt[l_idx+1:r_idx].split(';')
@@ -308,7 +294,6 @@ class Class(object):
         contents.append('};\n')
 
         return '\n'.join(contents)
-
 
     def generate_symbols(self):
         contents = ['/* %s */\n' % self.name]
@@ -327,7 +312,6 @@ class Class(object):
             contents.append('')
 
         return '\n'.join(contents)
-
 
     @staticmethod
     def s_name_is_valid(name):
@@ -349,7 +333,6 @@ class Class(object):
                     return False
 
         return True
-
 
     @staticmethod
     def s_create():
@@ -418,17 +401,14 @@ class Method(object):
         if ea != idc.BADADDR:
             database.get().known_methods[ea] = self
 
-
     def type_name(self):
         return 'regular'
-
 
     def refresh(self):
         if self.ea != idc.BADADDR:
             mangled = self.get_mangled()
             idc.set_name(self.ea, mangled, idc.SN_CHECK)
         self.refresh_comments()
-
 
     def unlink(self):
         if self.owner and self in self.owner.methods:
@@ -441,10 +421,8 @@ class Method(object):
             idc.set_name(self.ea, '', idc.SN_CHECK)
             idc.set_func_cmt(self.ea, '', False)
 
-
     def is_dst_equal(self, dst):
         return dst == self.ea
-
 
     def set_signature(self, name, args, return_type='void', is_const=False, ctor_type=1, dtor_type=1):
         signature = Method.s_make_signature(self.owner, name, args, is_const, return_type)
@@ -456,7 +434,6 @@ class Method(object):
         self.ctor_type = ctor_type
         self.dtor_type = dtor_type
         self.refresh()
-
 
     @staticmethod
     def s_make_signature(owner, name, args='', is_const=False, return_type=''):
@@ -471,14 +448,11 @@ class Method(object):
             signature = return_type + ' ' + signature
         return signature
 
-
     def get_signature(self, include_return_type=True, include_owner=True):
         return Method.s_make_signature(self.owner if include_owner else None, self.name, self.args, self.is_const, self.return_type if include_return_type else '')
 
-
     def get_mangled(self):
         return itanium_mangler.mangle_function(self.get_signature(), database.get().typedefs, self.ctor_type, self.dtor_type)  # throws excption when invalid
-
 
     def copy_signature(self, other):
         if (other.owner is not None) and (other.name == '~' + other.owner.name):
@@ -493,15 +467,12 @@ class Method(object):
         self.ctor_type = other.ctor_type
         self.dtor_type = other.dtor_type
 
-
     def get_mangled(self):
         demangled = self.get_signature(False)
         return itanium_mangler.mangle_function(demangled, database.get().typedefs, self.ctor_type, self.dtor_type)
 
-
     def get_comment(self):
         return ''
-
 
     def refresh_comments(self):
         if self.ea == idc.BADADDR:
@@ -511,16 +482,13 @@ class Method(object):
         if comment:
             idc.set_func_cmt(self.ea, comment, False)
 
-
     @staticmethod
     def s_is_pure_virtual_dst(dst):
         return dst in database.get().pure_virtual_vals
 
-
     @staticmethod
     def s_is_deleted_virtual_dst(dst):
         return dst in database.get().deleted_virtual_vals
-
 
 
 class VirtualMethod(Method):
@@ -529,27 +497,21 @@ class VirtualMethod(Method):
         self.vtable_idx = vtable_idx
         self.overrides = []
 
-
     def is_override(self):
         return False
-
 
     def is_pure_virtual(self):
         return False
 
-
     def type_name(self):
         return 'virtual'
-
 
     def refresh(self):
         Method.refresh(self)
 
-
     def refresh_comments(self):
         Method.refresh_comments(self)
         idc.set_cmt(self.owner.get_vtable_index_ea(self.vtable_idx), self.get_vtable_comment(), 0) 
-
 
     def unlink(self):
         if len(self.overrides) > 0:
@@ -559,12 +521,10 @@ class VirtualMethod(Method):
                 self.owner.vmethods[i] = None
         Method.unlink(self)
 
-
     def set_signature(self, name, args, return_type='void', is_const=False, ctor_type=1, dtor_type=1):
         Method.set_signature(self, name, args, return_type, is_const, ctor_type, dtor_type)
         for o in self.overrides:
             o.propagate_signature()
-
 
     def get_comment(self):
         lines = []
@@ -581,17 +541,14 @@ class VirtualMethod(Method):
 
         return "\n".join(lines)
 
-
     def get_vtable_comment(self):
         return ''
-
 
     def add_override(self, override):
         if override in self.overrides:
             return
         self.overrides.append(override)
         self.refresh_comments()
-
 
     def remove_override(self, override):
         if override not in self.overrides:
@@ -600,45 +557,35 @@ class VirtualMethod(Method):
         self.refresh_comments()
 
 
-
 class PureVirtualMethod(VirtualMethod):
     def __init__(self, owner, name, vtable_idx):
         super(PureVirtualMethod, self).__init__(idc.BADADDR, owner, name, vtable_idx)
 
-
     def is_pure_virtual(self):
         return True
-
 
     def type_name(self):
         return 'pure virtual'
 
-
     def is_dst_equal(self, dst):
         return Method.s_is_pure_virtual_dst(dst)
-
 
     def get_comment(self):
         return ''
 
-
     def get_vtable_comment(self):
         return self.get_signature()
-
 
 
 class DeletedVirtualMethod(PureVirtualMethod):
     def __init__(self, owner, name, vtable_idx):
         super(DeletedVirtualMethod, self).__init__(owner, name, vtable_idx)
 
-
     def type_name(self):
         return 'deleted virtual'
 
-
     def is_dst_equal(self, dst):
         return Method.s_is_deleted_virtual_dst(dst)
-
 
 
 class OverrideMethod(VirtualMethod):
@@ -650,19 +597,15 @@ class OverrideMethod(VirtualMethod):
         self.base.add_override(self)
         self.copy_signature(base)
 
-
     def is_override(self):
         return True
-
 
     def type_name(self):
         return 'override'
 
-
     def unlink(self):
         self.base.remove_override(self)
         VirtualMethod.unlink(self)
-
 
     def set_signature(self, name, args, return_type='void', is_const=False, ctor_type=1, dtor_type=1):
         root_method = self.get_root_method()
@@ -674,20 +617,17 @@ class OverrideMethod(VirtualMethod):
 
         root_method.set_signature(root_name, args, return_type, is_const, ctor_type, dtor_type)
 
-
     def propagate_signature(self):
         self.copy_signature(self.base)
         self.refresh()
         for o in self.overrides:
             o.propagate_signature()
 
-
     def get_root_method(self):
         method = self
         while method.is_override():
             method = method.base
         return method
-
 
     def get_comment(self):
         if self.base.is_pure_virtual():
@@ -697,63 +637,49 @@ class OverrideMethod(VirtualMethod):
         return 'Overrides: %s : %s\n\n%s' % (self.base.owner.name, override_cmt, VirtualMethod.get_comment(self))
 
 
-
 class PureVirtualOverrideMethod(OverrideMethod):
     def __init__(self, owner, base, vtable_idx):
         super(PureVirtualOverrideMethod, self).__init__(idc.BADADDR, owner, base, vtable_idx)
 
-
     def is_pure_virtual(self):
         return True
-
 
     def type_name(self):
         return 'pure virtual override'
 
-
     def is_dst_equal(self, dst):
         return Method.s_is_pure_virtual_dst(dst)
-
 
     def get_comment(self):
         return ''
 
-
     def get_vtable_comment(self):
         return self.get_signature()
-
 
 
 class DeletedOverrideMethod(PureVirtualOverrideMethod):
     def __init__(self, owner, base, vtable_idx):
         super(DeletedOverrideMethod, self).__init__(owner, base, vtable_idx)
 
-
     def type_name(self):
         return 'deleted override'
 
-
     def is_dst_equal(self, dst):
         return Method.s_is_deleted_virtual_dst(dst)
-
 
 
 class NullMethod(Method):
     def __init__(self, owner):
         super(NullMethod, self).__init__(idc.BADADDR, owner, 'NullMethod')
 
-
     def type_name(self):
         return 'null'
-
 
     def refresh(self):
         pass
 
-
     def unlink(self):
         pass
-
 
 
 def refresh_all():

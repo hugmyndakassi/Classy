@@ -1,6 +1,6 @@
 import idaapi
 import idc
-from PyQt5 import QtWidgets, QtCore
+from PySide6 import QtWidgets, QtCore
 
 import classy.database as database
 import classy.itanium_mangler as itanium_mangler

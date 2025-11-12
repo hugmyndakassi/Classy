@@ -1,5 +1,5 @@
 import idaapi
-from PyQt5 import QtWidgets, QtCore
+from PySide6 import QtWidgets, QtCore
 from classy.aboutwindow import AboutWindow
 
 
@@ -21,10 +21,9 @@ def show_about():
     AboutWindow().exec_()
 
 
-
 class ClickableQLabel(QtWidgets.QLabel):
-    clicked = QtCore.pyqtSignal()
-    doubleClicked = QtCore.pyqtSignal()
+  clicked = QtCore.Signal()
+  doubleClicked = QtCore.Signal()
 
     def __init__(self, parent=None):
         QtWidgets.QLabel.__init__(self, parent)
@@ -36,9 +35,8 @@ class ClickableQLabel(QtWidgets.QLabel):
         self.doubleClicked.emit()
 
 
-
 class EnterPressQTableWidget(QtWidgets.QTableWidget):
-    cellEnterPressed = QtCore.pyqtSignal(int, int)
+  cellEnterPressed = QtCore.Signal(int, int)
 
     def __init__(self, parent=None):
         super(EnterPressQTableWidget, self).__init__(parent)

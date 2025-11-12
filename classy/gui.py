@@ -1,5 +1,8 @@
-from PyQt5 import QtWidgets, QtCore
-import sip
+from PySide6 import QtWidgets, QtCore
+try:
+  from PySide6 import shiboken6
+except ImportError:
+  shiboken6 = None
 import idaapi
 import idc
 
@@ -18,10 +21,8 @@ class ClassyGui(idaapi.PluginForm):
         self.parent = None
         self.items_by_class = {}
 
-
     def show(self):
         idaapi.PluginForm.Show(self, 'Classy')
-
 
     def OnCreate(self, form):
         self.parent = self.FormToPyQtWidget(form)
@@ -67,11 +68,9 @@ class ClassyGui(idaapi.PluginForm):
 
         self.update_fields()
 
-
     def update_fields(self):
         self.reload_tree()
         self.class_edit.update_fields()
-
 
     def reload_tree(self):
         db = database.get()
@@ -80,7 +79,6 @@ class ClassyGui(idaapi.PluginForm):
         self.class_tree.clear()
         for c in db.root_classes:
             self.add_child_class_item(self.class_tree, c)
-
 
     def add_child_class_item(self, parent, c):
         if parent is None:
@@ -92,7 +90,6 @@ class ClassyGui(idaapi.PluginForm):
         for d in c.derived:
             self.add_child_class_item(item, d)
         return item
-
 
     def add_class(self):
         c = database_entries.Class.s_create()
@@ -110,7 +107,6 @@ class ClassyGui(idaapi.PluginForm):
         self.class_tree.scrollToItem(item)
         item.setSelected(True)
 
-
     def remove_class(self):
         item = self.class_tree.selectedItems()[0] if len(self.class_tree.selectedItems()) else None
         if item is None:
@@ -126,11 +122,11 @@ class ClassyGui(idaapi.PluginForm):
         try:
             c.unlink()
             del self.items_by_class[c]
-            sip.delete(item)
+      if shiboken6:
+        shiboken6.delete(item)
             idaapi.refresh_idaview_anyway()
         except ValueError as e:
             idaapi.warning(str(e))
-
 
     def update_class(self, c):
         try:
@@ -139,7 +135,6 @@ class ClassyGui(idaapi.PluginForm):
             return
 
         item.setText(0, c.name)
-
 
     def generate_class_header_to_file(self):
         item = self.class_tree.selectedItems()[0] if len(self.class_tree.selectedItems()) else None
@@ -171,7 +166,6 @@ class ClassyGui(idaapi.PluginForm):
 
         QtWidgets.QApplication.clipboard().setText(c.generate_cpp_definition())
 
-
     def handle_class_tree_selection_change(self):
         item = self.class_tree.selectedItems()[0] if len(self.class_tree.selectedItems()) else None
         if item is None:
@@ -182,7 +176,6 @@ class ClassyGui(idaapi.PluginForm):
                 self.class_edit.set_edit_class(c)
             else:
                 self.class_edit.set_edit_class(None)
-
 
     def handle_class_tree_context_menu(self, point):
         item = self.class_tree.itemAt(point)
@@ -196,7 +189,6 @@ class ClassyGui(idaapi.PluginForm):
             menu.addAction('Generate C++ Header (Clipboard)', self.generate_class_header_to_clipboard)
 
         menu.exec_(self.class_tree.mapToGlobal(point))
-
 
 
 class ClassWidget(QtWidgets.QWidget):
@@ -284,11 +276,9 @@ class ClassWidget(QtWidgets.QWidget):
 
         self.update_fields()
 
-
     def set_edit_class(self, edit_class):
         self.edit_class = edit_class
         self.update_fields()
-
 
     def update_fields(self):
         if self.edit_class is None:
@@ -343,7 +333,6 @@ class ClassWidget(QtWidgets.QWidget):
                 self.methods.setItem(idx, 0, address_item)
                 self.methods.setItem(idx, 1, QtWidgets.QTableWidgetItem(m.get_signature()))
 
-
     def handle_set_struct(self):
         if self.edit_class is None:
             return
@@ -372,7 +361,6 @@ class ClassWidget(QtWidgets.QWidget):
         self.edit_class.set_struct_id(dlg.struct_id, delete_orphaned)
         self.update_fields()
 
-
     def handle_struct_double_clicked(self):
         if self.edit_class is None:
             return
@@ -381,7 +369,6 @@ class ClassWidget(QtWidgets.QWidget):
             return
 
         idaapi.open_structs_window(self.edit_class.struct_id)
-
 
     def handle_set_name(self):
         if self.edit_class is None:
@@ -402,7 +389,6 @@ class ClassWidget(QtWidgets.QWidget):
         self.edit_class.rename(new_name)
         self.update_fields()
         self.parent_gui.update_class(self.edit_class)
-
 
     def handle_set_vtable_range(self):
         if self.edit_class is None:
@@ -442,7 +428,6 @@ class ClassWidget(QtWidgets.QWidget):
         except ValueError as e:
             idaapi.warning(str(e))
 
-
     def handle_vtable_interaction(self, row, column):
         if self.edit_class is None:
             return
@@ -460,7 +445,6 @@ class ClassWidget(QtWidgets.QWidget):
             vm.set_signature(dlg.name, dlg.args, dlg.return_type, dlg.is_const, dlg.ctor_type, dlg.dtor_type)
             self.vtable.setItem(row, 2, QtWidgets.QTableWidgetItem(vm.get_signature()))
             idaapi.refresh_idaview_anyway()
-
 
     def handle_add_method(self):
         db = database.get()
@@ -500,7 +484,6 @@ class ClassWidget(QtWidgets.QWidget):
 
         self.update_fields()
 
-
     def handle_remove_method(self):
         db = database.get()
 
@@ -519,8 +502,6 @@ class ClassWidget(QtWidgets.QWidget):
 
         self.update_fields()
 
-
-
     def handle_methods_interaction(self, row, column):
         if self.edit_class is None:
             return
@@ -538,4 +519,3 @@ class ClassWidget(QtWidgets.QWidget):
             m.set_signature(dlg.name, dlg.args, dlg.return_type, dlg.is_const, dlg.ctor_type, dlg.dtor_type)
             self.methods.setItem(row, 1, QtWidgets.QTableWidgetItem(m.get_signature()))
             idaapi.refresh_idaview_anyway()
-
