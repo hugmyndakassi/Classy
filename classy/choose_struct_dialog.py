@@ -2,7 +2,7 @@ import idc
 import idaapi
 import ida_typeinf
 import ida_kernwin
-from PyQt5 import QtWidgets, QtCore
+from PySide6 import QtWidgets, QtCore
 
 import classy.util as util
 import classy.itanium_mangler as itanium_mangler
@@ -40,7 +40,6 @@ class ChooseStructDialog(QtWidgets.QDialog):
         cancel_btn.clicked.connect(self.reject)
         layout.addWidget(cancel_btn)
 
-
     def handle_new(self):
         new_name = self.new_name_w.text().encode('ascii', 'replace').strip().decode()
 
@@ -63,7 +62,6 @@ class ChooseStructDialog(QtWidgets.QDialog):
 
         self.accept()
 
-
     def handle_existing(self):
         struct = ida_typeinf.tinfo_t()
         if not ida_kernwin.choose_struct(struct, 'Select an existing struct'):
@@ -71,7 +69,6 @@ class ChooseStructDialog(QtWidgets.QDialog):
 
         self.struct_id = struct.force_tid()
         self.accept()
-
 
     def handle_none(self):
         self.struct_id = idc.BADADDR

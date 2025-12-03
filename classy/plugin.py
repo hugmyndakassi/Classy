@@ -2,7 +2,7 @@ import os
 import re
 import idaapi
 
-from PyQt5 import QtWidgets, QtCore
+from PySide6 import QtWidgets, QtCore
 
 from classy.util import *
 from classy.gui import *
@@ -22,7 +22,6 @@ class ClassyPlugin(idaapi.plugin_t):
 
     version = 'v0.0.2'
 
-
     def init(self):
         self.menumgr = MenuMgr(self)
         self.gui = ClassyGui(self)
@@ -39,15 +38,12 @@ class ClassyPlugin(idaapi.plugin_t):
         else:
             self.menumgr.set_state(MenuState.DATABASE_CLOSED)
 
-
         log('Loaded')
 
         return idaapi.PLUGIN_KEEP
 
-
     def run(self, arg):
         show_about()
-
 
     def term(self):
         try:
@@ -66,10 +62,8 @@ class ClassyPlugin(idaapi.plugin_t):
 
         log('Unloaded')
 
-
     def save(self):
         database.get().save()
-
 
     def save_as(self):
         db = database.get()
@@ -87,10 +81,8 @@ class ClassyPlugin(idaapi.plugin_t):
 
         db.save_as(path[0])
 
-
     def show_gui(self):
         self.gui.show()
-
 
     def create_open_database(self):
         db = database.get()
@@ -105,7 +97,6 @@ class ClassyPlugin(idaapi.plugin_t):
         else:
             self.menumgr.set_state(MenuState.DATABASE_CLOSED)
 
-
     def export_all_symbols(self):
         path = QtWidgets.QFileDialog.getSaveFileName(None,
                                                      'Export all symbols', '',
@@ -117,19 +108,15 @@ class ClassyPlugin(idaapi.plugin_t):
         f.write(database.get().generate_symbols())
         f.close()
 
-
-
     def clear_database(self):
         if ask_yes_no('Are you really sure that you want to clear the Classy databse?\n', False):
             database.get().clear()
             self.gui.update_fields()
             idaapi.refresh_idaview_anyway()
 
-
     def edit_typedefs(self):
         dlg = TypedefDialog()
         dlg.exec_()
-
 
     def edit_pure_virtual_vals(self):
         db = database.get()
@@ -149,7 +136,6 @@ class ClassyPlugin(idaapi.plugin_t):
 
         db.pure_virtual_vals = new_pure_virtual_vals
 
-
     def edit_deleted_virtual_vals(self):
         db = database.get()
 
@@ -168,11 +154,9 @@ class ClassyPlugin(idaapi.plugin_t):
 
         db.deleted_virtual_vals = new_deleted_virtual_vals
 
-
     def refresh_all(self):
         database_entries.refresh_all()
         idaapi.refresh_idaview_anyway()
-
 
     def set_autosave_interval(self):
         db = database.get()

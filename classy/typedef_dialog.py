@@ -1,6 +1,6 @@
 import idaapi
 import idc
-from PyQt5 import QtWidgets, QtCore
+from PySide6 import QtWidgets, QtCore
 
 import classy.database as database
 import classy.itanium_mangler as itanium_mangler
@@ -38,7 +38,6 @@ class TypedefDialog(QtWidgets.QDialog):
 
         self.update_list()
 
-
     def update_list(self):
         db = database.get()
 
@@ -47,7 +46,6 @@ class TypedefDialog(QtWidgets.QDialog):
             item = QtWidgets.QListWidgetItem('typedef %s %s;' % (db.typedefs[t], t))
             item.setData(QtCore.Qt.UserRole, t)
             self.list.addItem(item)
-
 
     def handle_add(self):
         t = idaapi.ask_str('', idaapi.HIST_IDENT,'Enter typedef name')
@@ -66,7 +64,6 @@ class TypedefDialog(QtWidgets.QDialog):
 
         self.try_set_typedef(t)
 
-
     def handle_edit(self):
         item = self.list.currentItem()
         if item is None:
@@ -74,7 +71,6 @@ class TypedefDialog(QtWidgets.QDialog):
 
         t = item.data(QtCore.Qt.UserRole)
         self.try_set_typedef(t)
-
 
     def handle_remove(self):
         item = self.list.currentItem()
@@ -85,7 +81,6 @@ class TypedefDialog(QtWidgets.QDialog):
         del database.get().typedefs[t]
 
         self.update_list()
-
 
     def try_set_typedef(self, t):
         val = idaapi.ask_str('', idaapi.HIST_IDENT,'Enter typedef value')

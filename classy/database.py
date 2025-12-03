@@ -4,7 +4,7 @@ import os
 from datetime import datetime
 
 from classy.util import log
-from PyQt5 import QtCore
+from PySide6 import QtCore
 
 
 class ClassyDatabase(object):
@@ -18,7 +18,6 @@ class ClassyDatabase(object):
     LIST_DEFAULTS = ['root_classes', 'pure_virtual_vals', 'deleted_virtual_vals']
     DEFAULTS = {'autosave_interval': 60}
 
-
     def __init__(self):
         self.data = {}
         self.is_open = False
@@ -30,12 +29,10 @@ class ClassyDatabase(object):
         self.autosave_timer = QtCore.QTimer()
         self.autosave_timer.timeout.connect(self.autosave)
 
-
     def is_created(self):
         if self.is_open:
             return True
         return os.path.isfile(self.path)
-
 
     def delete(self):
         if self.is_open:
@@ -45,7 +42,6 @@ class ClassyDatabase(object):
             os.remove(self.path)
         except:
             pass
-
 
     def open(self):
         try:
@@ -67,13 +63,10 @@ class ClassyDatabase(object):
         self.is_open = True
         self.autosave_timer.start(self.autosave_interval * 1000)
 
-
-
     def close(self):
         self.autosave_timer.stop()
         self.data = {}
         self.is_open = False
-
 
     def __getattr__(self, key):
         try:
@@ -86,13 +79,11 @@ class ClassyDatabase(object):
             except KeyError:
                 raise AttributeError('Classy database has no attribute %s' % key)
 
-
     def __setattr__(self, key, value):
         if key in self.NON_DICT_ATTRIBUTES:
             object.__setattr__(self, key, value)
         else:
             self.data[key] = value
-
 
     def save(self):
         self.save_as(self.path)
@@ -101,33 +92,27 @@ class ClassyDatabase(object):
         except FileNotFoundError:
             pass
 
-
     def save_as(self, path):
         if not self.is_open:
             return
         cPickle.dump(self.data, open(path, 'wb'))
 
-
     def autosave(self):
         self.save_as(self.autosave_path)
         log('Classy database autosaved')
 
-
     def initialize(self):
         self.version = self.CURRENT_VERSION
-
 
     def clear(self):
         self.data = {}
         self.initialize()
-
 
     def set_autosave_interval(self, interval):
         self.autosave_interval = interval
         self.autosave_timer.stop()
         if self.is_open:
             self.autosave_timer.start(self.autosave_interval * 1000)
-
 
     def generate_symbols(self):
         contents = []
@@ -143,7 +128,6 @@ class ClassyDatabase(object):
 
         return '\n'.join(contents)
 
-
     @staticmethod
     def default_for(key):
         if key in ClassyDatabase.NONE_DEFAULTS:
@@ -153,7 +137,6 @@ class ClassyDatabase(object):
         if key in ClassyDatabase.LIST_DEFAULTS:
             return []
         return ClassyDatabase.DEFAULTS[key]
-
 
 
 db = None
